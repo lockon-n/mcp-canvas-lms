@@ -923,7 +923,7 @@ class CanvasMCPServer {
   }
 
   private setupErrorHandling(): void {
-    this.server.onerror = (error) => {
+    this.server.onerror = (error: Error) => {
       console.error(`[${this.config.name} Error]`, error);
     };
 
@@ -1045,7 +1045,7 @@ class CanvasMCPServer {
     });
 
     // Read resource content
-    this.server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+    this.server.setRequestHandler(ReadResourceRequestSchema, async (request: any) => {
       const uri = request.params.uri;
       const [type, id] = uri.split("://");
       
@@ -1142,7 +1142,7 @@ class CanvasMCPServer {
     }));
 
     // Handle tool calls with comprehensive error handling
-    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
+    this.server.setRequestHandler(CallToolRequestSchema, async (request: any) => {
       try {
         const args = request.params.arguments || {};
         const toolName = request.params.name;
@@ -1592,6 +1592,261 @@ class CanvasMCPServer {
             const report = await this.client.createAccountReport(createReportArgs);
             return {
               content: [{ type: "text", text: JSON.stringify(report, null, 2) }]
+            };
+          }
+
+          // Modules
+          case "canvas_list_modules": {
+            const { course_id } = args as { course_id: number };
+            if (!course_id) throw new Error("Missing required field: course_id");
+            
+            const modules = await this.client.listModules(course_id);
+            return {
+              content: [{ type: "text", text: JSON.stringify(modules, null, 2) }]
+            };
+          }
+
+          case "canvas_get_module": {
+            const { course_id, module_id } = args as { course_id: number; module_id: number };
+            if (!course_id || !module_id) {
+              throw new Error("Missing required fields: course_id and module_id");
+            }
+            
+            const module = await this.client.getModule(course_id, module_id);
+            return {
+              content: [{ type: "text", text: JSON.stringify(module, null, 2) }]
+            };
+          }
+
+          case "canvas_list_module_items": {
+            const { course_id, module_id } = args as { course_id: number; module_id: number };
+            if (!course_id || !module_id) {
+              throw new Error("Missing required fields: course_id and module_id");
+            }
+            
+            const items = await this.client.listModuleItems(course_id, module_id);
+            return {
+              content: [{ type: "text", text: JSON.stringify(items, null, 2) }]
+            };
+          }
+
+          case "canvas_get_module_item": {
+            const { course_id, module_id, item_id } = args as { 
+              course_id: number; 
+              module_id: number; 
+              item_id: number 
+            };
+            if (!course_id || !module_id || !item_id) {
+              throw new Error("Missing required fields: course_id, module_id, and item_id");
+            }
+            
+            const item = await this.client.getModuleItem(course_id, module_id, item_id);
+            return {
+              content: [{ type: "text", text: JSON.stringify(item, null, 2) }]
+            };
+          }
+
+          case "canvas_mark_module_item_complete": {
+            const { course_id, module_id, item_id } = args as { 
+              course_id: number; 
+              module_id: number; 
+              item_id: number 
+            };
+            if (!course_id || !module_id || !item_id) {
+              throw new Error("Missing required fields: course_id, module_id, and item_id");
+            }
+            
+            const result = await this.client.markModuleItemComplete(course_id, module_id, item_id);
+            return {
+              content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
+            };
+          }
+
+          // Discussions
+          case "canvas_list_discussion_topics": {
+            const { course_id } = args as { course_id: number };
+            if (!course_id) throw new Error("Missing required field: course_id");
+            
+            const topics = await this.client.listDiscussionTopics(course_id);
+            return {
+              content: [{ type: "text", text: JSON.stringify(topics, null, 2) }]
+            };
+          }
+
+          case "canvas_get_discussion_topic": {
+            const { course_id, topic_id } = args as { course_id: number; topic_id: number };
+            if (!course_id || !topic_id) {
+              throw new Error("Missing required fields: course_id and topic_id");
+            }
+            
+            const topic = await this.client.getDiscussionTopic(course_id, topic_id);
+            return {
+              content: [{ type: "text", text: JSON.stringify(topic, null, 2) }]
+            };
+          }
+
+          case "canvas_post_to_discussion": {
+            const { course_id, topic_id, message } = args as { 
+              course_id: number; 
+              topic_id: number; 
+              message: string 
+            };
+            if (!course_id || !topic_id || !message) {
+              throw new Error("Missing required fields: course_id, topic_id, and message");
+            }
+            
+            const post = await this.client.postToDiscussion(course_id, topic_id, message);
+            return {
+              content: [{ type: "text", text: JSON.stringify(post, null, 2) }]
+            };
+          }
+
+          // Announcements
+          case "canvas_list_announcements": {
+            const { course_id } = args as { course_id: number };
+            if (!course_id) throw new Error("Missing required field: course_id");
+            
+            const announcements = await this.client.listAnnouncements(course_id.toString());
+            return {
+              content: [{ type: "text", text: JSON.stringify(announcements, null, 2) }]
+            };
+          }
+
+          // Quizzes
+          case "canvas_list_quizzes": {
+            const { course_id } = args as { course_id: number };
+            if (!course_id) throw new Error("Missing required field: course_id");
+            
+            const quizzes = await this.client.listQuizzes(course_id.toString());
+            return {
+              content: [{ type: "text", text: JSON.stringify(quizzes, null, 2) }]
+            };
+          }
+
+          case "canvas_get_quiz": {
+            const { course_id, quiz_id } = args as { course_id: number; quiz_id: number };
+            if (!course_id || !quiz_id) {
+              throw new Error("Missing required fields: course_id and quiz_id");
+            }
+            
+            const quiz = await this.client.getQuiz(course_id.toString(), quiz_id);
+            return {
+              content: [{ type: "text", text: JSON.stringify(quiz, null, 2) }]
+            };
+          }
+
+          case "canvas_create_quiz": {
+            const { course_id, title, quiz_type, time_limit, published, description, due_at } = args as {
+              course_id: number;
+              title: string;
+              quiz_type?: 'practice_quiz' | 'assignment' | 'graded_survey' | 'survey';
+              time_limit?: number;
+              published?: boolean;
+              description?: string;
+              due_at?: string;
+            };
+            if (!course_id || !title) {
+              throw new Error("Missing required fields: course_id and title");
+            }
+            
+            const quiz = await this.client.createQuiz(course_id, {
+              title,
+              quiz_type,
+              time_limit,
+              published,
+              description,
+              due_at
+            });
+            return {
+              content: [{ type: "text", text: JSON.stringify(quiz, null, 2) }]
+            };
+          }
+
+          case "canvas_start_quiz_attempt": {
+            const { course_id, quiz_id } = args as { course_id: number; quiz_id: number };
+            if (!course_id || !quiz_id) {
+              throw new Error("Missing required fields: course_id and quiz_id");
+            }
+            
+            const attempt = await this.client.startQuizAttempt(course_id, quiz_id);
+            return {
+              content: [{ type: "text", text: JSON.stringify(attempt, null, 2) }]
+            };
+          }
+
+          // Rubrics
+          case "canvas_list_rubrics": {
+            const { course_id } = args as { course_id: number };
+            if (!course_id) throw new Error("Missing required field: course_id");
+            
+            const rubrics = await this.client.listRubrics(course_id);
+            return {
+              content: [{ type: "text", text: JSON.stringify(rubrics, null, 2) }]
+            };
+          }
+
+          case "canvas_get_rubric": {
+            const { course_id, rubric_id } = args as { course_id: number; rubric_id: number };
+            if (!course_id || !rubric_id) {
+              throw new Error("Missing required fields: course_id and rubric_id");
+            }
+            
+            const rubric = await this.client.getRubric(course_id, rubric_id);
+            return {
+              content: [{ type: "text", text: JSON.stringify(rubric, null, 2) }]
+            };
+          }
+
+          // Conversations
+          case "canvas_list_conversations": {
+            const conversations = await this.client.listConversations();
+            return {
+              content: [{ type: "text", text: JSON.stringify(conversations, null, 2) }]
+            };
+          }
+
+          case "canvas_get_conversation": {
+            const { conversation_id } = args as { conversation_id: number };
+            if (!conversation_id) throw new Error("Missing required field: conversation_id");
+            
+            const conversation = await this.client.getConversation(conversation_id);
+            return {
+              content: [{ type: "text", text: JSON.stringify(conversation, null, 2) }]
+            };
+          }
+
+          case "canvas_create_conversation": {
+            const { recipients, body, subject } = args as { 
+              recipients: string[]; 
+              body: string; 
+              subject?: string 
+            };
+            if (!recipients || !body) {
+              throw new Error("Missing required fields: recipients and body");
+            }
+            
+            const conversation = await this.client.createConversation(recipients, body, subject);
+            return {
+              content: [{ type: "text", text: JSON.stringify(conversation, null, 2) }]
+            };
+          }
+
+          // Notifications
+          case "canvas_list_notifications": {
+            const notifications = await this.client.listNotifications();
+            return {
+              content: [{ type: "text", text: JSON.stringify(notifications, null, 2) }]
+            };
+          }
+
+          // Syllabus
+          case "canvas_get_syllabus": {
+            const { course_id } = args as { course_id: number };
+            if (!course_id) throw new Error("Missing required field: course_id");
+            
+            const syllabus = await this.client.getSyllabus(course_id);
+            return {
+              content: [{ type: "text", text: JSON.stringify(syllabus, null, 2) }]
             };
           }
           

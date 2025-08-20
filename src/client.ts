@@ -780,7 +780,7 @@ export class CanvasClient {
     
     // Temporarily disable automatic pagination for this specific request
     const originalGet = this.client.get;
-    this.client.get = async (url: string, config?: any) => {
+    (this.client as any).get = async (url: string, config?: any) => {
       const response = await originalGet.call(this.client, url, config);
       // Return raw response without pagination processing
       return response;

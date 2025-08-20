@@ -73,7 +73,7 @@
     "npm": ">=8.0.0"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.3",
+    "@modelcontextprotocol/sdk": "^1.17.3",
     "axios": "^1.7.2",
     "dotenv": "^16.4.7"
   },
