@@ -694,10 +694,35 @@ export class CanvasClient {
   async listAnnouncements(courseId: string): Promise<CanvasAnnouncement[]> {
     const response = await this.client.get(`/courses/${courseId}/discussion_topics`, {
       params: {
-        type: 'announcement',
-        include: ['assignment']
+        only_announcements: true
       }
     });
+    return response.data || [];
+  }
+
+  async createAnnouncement(courseId: number, announcementData: {
+    title: string;
+    message: string;
+    is_announcement?: boolean;
+    published?: boolean;
+    delayed_post_at?: string;
+    attachment?: any;
+  }): Promise<CanvasAnnouncement> {
+    // For announcements, published must be true or omitted (can't be draft)
+    const postData: any = {
+      title: announcementData.title,
+      message: announcementData.message,
+      is_announcement: announcementData.is_announcement !== false, // default to true
+      delayed_post_at: announcementData.delayed_post_at,
+      attachment: announcementData.attachment
+    };
+    
+    // Only add published if it's explicitly true or if no delayed posting
+    if (announcementData.published === true || !announcementData.delayed_post_at) {
+      postData.published = true;
+    }
+    
+    const response = await this.client.post(`/courses/${courseId}/discussion_topics`, postData);
     return response.data;
   }
 

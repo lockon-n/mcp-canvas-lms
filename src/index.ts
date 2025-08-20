@@ -629,6 +629,23 @@ const TOOLS: Tool[] = [
       required: ["course_id"]
     }
   },
+  {
+    name: "canvas_create_announcement",
+    description: "Create a new announcement in a course",
+    inputSchema: {
+      type: "object",
+      properties: {
+        course_id: { type: "number", description: "ID of the course" },
+        title: { type: "string", description: "Title of the announcement" },
+        message: { type: "string", description: "Content/message of the announcement" },
+        is_announcement: { type: "boolean", description: "Mark as announcement (default: true)" },
+        published: { type: "boolean", description: "Whether the announcement is published" },
+        delayed_post_at: { type: "string", description: "Delayed posting time (ISO format)" },
+        attachment: { type: "object", description: "File attachment for the announcement" }
+      },
+      required: ["course_id", "title", "message"]
+    }
+  },
 
   // Quizzes
   {
@@ -1709,6 +1726,33 @@ class CanvasMCPServer {
             const announcements = await this.client.listAnnouncements(course_id.toString());
             return {
               content: [{ type: "text", text: JSON.stringify(announcements, null, 2) }]
+            };
+          }
+
+          case "canvas_create_announcement": {
+            const { course_id, title, message, is_announcement, published, delayed_post_at, attachment } = args as {
+              course_id: number;
+              title: string;
+              message: string;
+              is_announcement?: boolean;
+              published?: boolean;
+              delayed_post_at?: string;
+              attachment?: any;
+            };
+            if (!course_id || !title || !message) {
+              throw new Error("Missing required fields: course_id, title, and message");
+            }
+            
+            const announcement = await this.client.createAnnouncement(course_id, {
+              title,
+              message,
+              is_announcement,
+              published,
+              delayed_post_at,
+              attachment
+            });
+            return {
+              content: [{ type: "text", text: JSON.stringify(announcement, null, 2) }]
             };
           }
 
