@@ -44,10 +44,12 @@ import {
 export class CanvasClient {
   private client: AxiosInstance;
   private baseURL: string;
+  private token: string;
   private maxRetries: number = 3;
   private retryDelay: number = 1000;
 
   constructor(token: string, domain: string, options?: { maxRetries?: number; retryDelay?: number }) {
+    this.token = token;
     this.baseURL = `https://${domain}/api/v1`;
     this.maxRetries = options?.maxRetries ?? 3;
     this.retryDelay = options?.retryDelay ?? 1000;
@@ -813,53 +815,50 @@ export class CanvasClient {
     // Limit per_page to maximum of 20
     const limitedPerPage = Math.min(per_page, 20);
     
-    // Temporarily disable automatic pagination for this specific request
-    const originalGet = this.client.get;
-    (this.client as any).get = async (url: string, config?: any) => {
-      const response = await originalGet.call(this.client, url, config);
-      // Return raw response without pagination processing
-      return response;
+    // Create a new axios instance without interceptors for this specific request
+    const { default: newAxios } = await import('axios');
+    const simpleClient = newAxios.create({
+      baseURL: this.baseURL,
+      headers: {
+        'Authorization': `Bearer ${this.token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    const response = await simpleClient.get(`/accounts/${account_id}/users`, { 
+      params: { 
+        ...params, 
+        page, 
+        per_page: limitedPerPage 
+      } 
+    });
+
+    // Parse pagination info from Link header
+    const linkHeader = response.headers.link;
+    let pagination: any = {
+      current_page: page
     };
 
-    try {
-      const response = await this.client.get(`/accounts/${account_id}/users`, { 
-        params: { 
-          ...params, 
-          page, 
-          per_page: limitedPerPage 
-        } 
-      });
+    if (linkHeader) {
+      const links = linkHeader.split(',').reduce((acc: any, link: string) => {
+        const match = link.match(/<(.+?)>;\s*rel="(\w+)"/);
+        if (match) {
+          const url = new URL(match[1]);
+          const pageNum = parseInt(url.searchParams.get('page') || '1');
+          acc[match[2]] = pageNum;
+        }
+        return acc;
+      }, {});
 
-      // Parse pagination info from Link header
-      const linkHeader = response.headers.link;
-      let pagination: any = {
-        current_page: page
-      };
-
-      if (linkHeader) {
-        const links = linkHeader.split(',').reduce((acc: any, link: string) => {
-          const match = link.match(/<(.+?)>;\s*rel="(\w+)"/);
-          if (match) {
-            const url = new URL(match[1]);
-            const pageNum = parseInt(url.searchParams.get('page') || '1');
-            acc[match[2]] = pageNum;
-          }
-          return acc;
-        }, {});
-
-        if (links.next) pagination.next_page = links.next;
-        if (links.prev) pagination.prev_page = links.prev;
-        if (links.last) pagination.total_pages = links.last;
-      }
-
-      return {
-        users: response.data,
-        pagination
-      };
-    } finally {
-      // Restore original get method
-      this.client.get = originalGet;
+      if (links.next) pagination.next_page = links.next;
+      if (links.prev) pagination.prev_page = links.prev;
+      if (links.last) pagination.total_pages = links.last;
     }
+
+    return {
+      users: response.data,
+      pagination
+    };
   }
 
   async createUser(args: CreateUserArgs): Promise<CanvasUser> {
