@@ -88,11 +88,19 @@ export class CanvasClient {
         if (Array.isArray(data) && linkHeader && contentType.includes('application/json')) {
           let allData = [...data];
           let nextUrl = this.getNextPageUrl(linkHeader);
+          const maxPages = 1000; // Safety limit to prevent infinite loops
+          let pageCount = 1;
 
-          while (nextUrl) {
+          while (nextUrl && pageCount < maxPages) {
+            console.error(`[Canvas API] Fetching page ${pageCount + 1}...`);
             const nextResponse = await this.client.get(nextUrl);
             allData = [...allData, ...nextResponse.data];
             nextUrl = this.getNextPageUrl(nextResponse.headers.link);
+            pageCount++;
+          }
+
+          if (pageCount >= maxPages) {
+            console.error(`[Canvas API] Warning: Reached maximum page limit (${maxPages}). Some data may be missing.`);
           }
 
           response.data = allData;
@@ -178,7 +186,9 @@ export class CanvasClient {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
-  private getNextPageUrl(linkHeader: string): string | null {
+  private getNextPageUrl(linkHeader: string | undefined): string | null {
+    if (!linkHeader) return null;
+    
     const links = linkHeader.split(',');
     const nextLink = links.find(link => link.includes('rel="next"'));
     if (!nextLink) return null;
@@ -762,10 +772,59 @@ export class CanvasClient {
     return response.data;
   }
 
-  async listAccountUsers(args: ListAccountUsersArgs): Promise<CanvasUser[]> {
-    const { account_id, ...params } = args;
-    const response = await this.client.get(`/accounts/${account_id}/users`, { params });
-    return response.data;
+  async listAccountUsers(args: ListAccountUsersArgs): Promise<{ users: CanvasUser[], pagination?: { current_page: number, total_pages?: number, next_page?: number, prev_page?: number } }> {
+    const { account_id, page = 1, per_page = 20, ...params } = args;
+    
+    // Limit per_page to maximum of 20
+    const limitedPerPage = Math.min(per_page, 20);
+    
+    // Temporarily disable automatic pagination for this specific request
+    const originalGet = this.client.get;
+    this.client.get = async (url: string, config?: any) => {
+      const response = await originalGet.call(this.client, url, config);
+      // Return raw response without pagination processing
+      return response;
+    };
+
+    try {
+      const response = await this.client.get(`/accounts/${account_id}/users`, { 
+        params: { 
+          ...params, 
+          page, 
+          per_page: limitedPerPage 
+        } 
+      });
+
+      // Parse pagination info from Link header
+      const linkHeader = response.headers.link;
+      let pagination: any = {
+        current_page: page
+      };
+
+      if (linkHeader) {
+        const links = linkHeader.split(',').reduce((acc: any, link: string) => {
+          const match = link.match(/<(.+?)>;\s*rel="(\w+)"/);
+          if (match) {
+            const url = new URL(match[1]);
+            const pageNum = parseInt(url.searchParams.get('page') || '1');
+            acc[match[2]] = pageNum;
+          }
+          return acc;
+        }, {});
+
+        if (links.next) pagination.next_page = links.next;
+        if (links.prev) pagination.prev_page = links.prev;
+        if (links.last) pagination.total_pages = links.last;
+      }
+
+      return {
+        users: response.data,
+        pagination
+      };
+    } finally {
+      // Restore original get method
+      this.client.get = originalGet;
+    }
   }
 
   async createUser(args: CreateUserArgs): Promise<CanvasUser> {

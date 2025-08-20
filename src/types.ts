@@ -799,10 +799,13 @@ export interface ListAccountCoursesArgs {
 }
 
 export interface ListAccountUsersArgs {
-  account_id: number;
+  session_id?: string;
+  account_id?: number;
   search_term?: string;
   enrollment_type?: string;
   sort?: 'username' | 'email' | 'sis_id' | 'last_login';
   order?: 'asc' | 'desc';
   include?: string[];
+  page?: number;
+  per_page?: number;
 }

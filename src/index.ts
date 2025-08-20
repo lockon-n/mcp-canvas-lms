@@ -34,6 +34,69 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 
+// Session management for pagination
+interface UserListSession {
+  id: string;
+  account_id: number;
+  search_term?: string;
+  sort?: 'username' | 'email' | 'sis_id' | 'last_login';
+  order?: 'asc' | 'desc';
+  per_page: number;
+  current_page: number;
+  created_at: number;
+}
+
+class SessionManager {
+  private sessions: Map<string, UserListSession> = new Map();
+  private readonly SESSION_TTL = 30 * 60 * 1000; // 30 minutes
+
+  generateSessionId(): string {
+    return 'sess_' + Math.random().toString(36).substring(2) + Date.now().toString(36);
+  }
+
+  createSession(params: Omit<UserListSession, 'id' | 'created_at'>): string {
+    const sessionId = this.generateSessionId();
+    this.sessions.set(sessionId, {
+      ...params,
+      id: sessionId,
+      created_at: Date.now()
+    });
+    this.cleanExpiredSessions();
+    return sessionId;
+  }
+
+  getSession(sessionId: string): UserListSession | null {
+    const session = this.sessions.get(sessionId);
+    if (!session) return null;
+    
+    if (Date.now() - session.created_at > this.SESSION_TTL) {
+      this.sessions.delete(sessionId);
+      return null;
+    }
+    
+    return session;
+  }
+
+  updateSession(sessionId: string, updates: Partial<UserListSession>): boolean {
+    const session = this.getSession(sessionId);
+    if (!session) return false;
+    
+    this.sessions.set(sessionId, { ...session, ...updates });
+    return true;
+  }
+
+  private cleanExpiredSessions(): void {
+    const now = Date.now();
+    for (const [id, session] of this.sessions.entries()) {
+      if (now - session.created_at > this.SESSION_TTL) {
+        this.sessions.delete(id);
+      }
+    }
+  }
+}
+
+const sessionManager = new SessionManager();
+
 // Enhanced tools list with all student-focused endpoints
 const TOOLS: Tool[] = [
   // Health and system tools
@@ -740,16 +803,22 @@ const TOOLS: Tool[] = [
   },
   {
     name: "canvas_list_account_users",
-    description: "List users for an account",
+    description: "List users for an account with pagination support and session management. Returns up to 20 users per page. Use session_id to continue previous search or provide new parameters to start fresh.",
     inputSchema: {
       type: "object",
       properties: {
-        account_id: { type: "number", description: "ID of the account" },
+        session_id: { type: "string", description: "Session ID to continue previous search (when provided, other parameters except 'page' are ignored)" },
+        account_id: { type: "number", description: "ID of the account (required for new sessions)" },
         search_term: { type: "string", description: "Search term to filter users" },
         sort: { type: "string", enum: ["username", "email", "sis_id", "last_login"], description: "Sort order" },
-        order: { type: "string", enum: ["asc", "desc"], description: "Sort direction" }
+        order: { type: "string", enum: ["asc", "desc"], description: "Sort direction" },
+        page: { type: "number", description: "Page number (starts from 1, default: 1)", default: 1 },
+        per_page: { type: "number", description: "Number of users per page (max: 20, default: 20)", default: 20 }
       },
-      required: ["account_id"]
+      anyOf: [
+        { required: ["session_id"] },
+        { required: ["account_id"] }
+      ]
     }
   },
   {
@@ -1394,13 +1463,91 @@ class CanvasMCPServer {
 
           case "canvas_list_account_users": {
             const accountUsersArgs = args as unknown as ListAccountUsersArgs;
-            if (!accountUsersArgs.account_id) {
-              throw new Error("Missing required field: account_id");
+            let sessionId: string;
+            let queryParams: {
+              account_id: number;
+              search_term?: string;
+              sort?: 'username' | 'email' | 'sis_id' | 'last_login';
+              order?: 'asc' | 'desc';
+              page: number;
+              per_page: number;
+            };
+
+            if (accountUsersArgs.session_id) {
+              // Use existing session
+              const session = sessionManager.getSession(accountUsersArgs.session_id);
+              if (!session) {
+                throw new Error(`Session ${accountUsersArgs.session_id} not found or expired. Please start a new search.`);
+              }
+              
+              sessionId = accountUsersArgs.session_id;
+              queryParams = {
+                account_id: session.account_id,
+                search_term: session.search_term,
+                sort: session.sort,
+                order: session.order,
+                page: accountUsersArgs.page || session.current_page,
+                per_page: session.per_page
+              };
+              
+              // Update session with new page
+              sessionManager.updateSession(sessionId, { current_page: queryParams.page });
+            } else {
+              // Create new session
+              if (!accountUsersArgs.account_id) {
+                throw new Error("Missing required field: account_id (required for new sessions)");
+              }
+              
+              queryParams = {
+                account_id: accountUsersArgs.account_id,
+                search_term: accountUsersArgs.search_term,
+                sort: accountUsersArgs.sort,
+                order: accountUsersArgs.order,
+                page: accountUsersArgs.page || 1,
+                per_page: Math.min(accountUsersArgs.per_page || 20, 20)
+              };
+              
+              sessionId = sessionManager.createSession({
+                account_id: queryParams.account_id,
+                search_term: queryParams.search_term,
+                sort: queryParams.sort,
+                order: queryParams.order,
+                per_page: queryParams.per_page,
+                current_page: queryParams.page
+              });
             }
             
-            const users = await this.client.listAccountUsers(accountUsersArgs);
+            const result = await this.client.listAccountUsers(queryParams);
+            const { users, pagination } = result;
+            
+            // Create response with session and pagination info
+            let responseText = `Users (Page ${pagination?.current_page || queryParams.page}):\n\n`;
+            responseText += JSON.stringify(users, null, 2);
+            
+            // Add session and pagination navigation info
+            responseText += "\n\n=== Session & Pagination Info ===\n";
+            responseText += `Session ID: ${sessionId}\n`;
+            responseText += `Current page: ${pagination?.current_page || queryParams.page}\n`;
+            
+            if (pagination?.total_pages) {
+              responseText += `Total pages: ${pagination.total_pages}\n`;
+            }
+            
+            if (pagination?.prev_page) {
+              responseText += `Previous page: Use {"session_id": "${sessionId}", "page": ${pagination.prev_page}}\n`;
+            }
+            
+            if (pagination?.next_page) {
+              responseText += `Next page: Use {"session_id": "${sessionId}", "page": ${pagination.next_page}}\n`;
+            }
+            
+            responseText += "\n📝 Session Usage:\n";
+            responseText += `• Continue browsing: Use session_id "${sessionId}" with different page numbers\n`;
+            responseText += `• New search: Omit session_id and provide account_id with new parameters\n`;
+            responseText += `• Sessions expire after 30 minutes of inactivity`;
+            
             return {
-              content: [{ type: "text", text: JSON.stringify(users, null, 2) }]
+              content: [{ type: "text", text: responseText }]
             };
           }
 
