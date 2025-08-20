@@ -257,8 +257,10 @@ export class CanvasClient {
     return response.data;
   }
 
-  async deleteCourse(courseId: number): Promise<void> {
-    await this.client.delete(`/courses/${courseId}`);
+  async deleteCourse(courseId: number, event: 'delete' | 'conclude' = 'delete'): Promise<void> {
+    await this.client.delete(`/courses/${courseId}`, {
+      data: { event }
+    });
   }
 
   // ---------------------

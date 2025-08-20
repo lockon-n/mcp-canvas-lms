@@ -792,11 +792,17 @@ const TOOLS: Tool[] = [
   // Delete Operations
   {
     name: "canvas_delete_course",
-    description: "Delete a course",
+    description: "Delete or conclude a course",
     inputSchema: {
       type: "object",
       properties: {
-        course_id: { type: "number", description: "ID of the course to delete" }
+        course_id: { type: "number", description: "ID of the course to delete" },
+        event: { 
+          type: "string", 
+          enum: ["delete", "conclude"], 
+          description: "Action to take: 'delete' removes the course entirely, 'conclude' makes it read-only",
+          default: "delete"
+        }
       },
       required: ["course_id"]
     }
@@ -1968,12 +1974,12 @@ class CanvasMCPServer {
 
           // Delete Operations
           case "canvas_delete_course": {
-            const { course_id } = args as { course_id: number };
+            const { course_id, event = "delete" } = args as { course_id: number; event?: "delete" | "conclude" };
             if (!course_id) throw new Error("Missing required field: course_id");
             
-            await this.client.deleteCourse(course_id);
+            await this.client.deleteCourse(course_id, event);
             return {
-              content: [{ type: "text", text: `Successfully deleted course ${course_id}` }]
+              content: [{ type: "text", text: `Successfully ${event}d course ${course_id}` }]
             };
           }
 
