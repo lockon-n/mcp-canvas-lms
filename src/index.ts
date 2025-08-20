@@ -789,6 +789,78 @@ const TOOLS: Tool[] = [
     }
   },
 
+  // Delete Operations
+  {
+    name: "canvas_delete_course",
+    description: "Delete a course",
+    inputSchema: {
+      type: "object",
+      properties: {
+        course_id: { type: "number", description: "ID of the course to delete" }
+      },
+      required: ["course_id"]
+    }
+  },
+  {
+    name: "canvas_delete_assignment",
+    description: "Delete an assignment",
+    inputSchema: {
+      type: "object",
+      properties: {
+        course_id: { type: "number", description: "ID of the course" },
+        assignment_id: { type: "number", description: "ID of the assignment to delete" }
+      },
+      required: ["course_id", "assignment_id"]
+    }
+  },
+  {
+    name: "canvas_delete_announcement",
+    description: "Delete an announcement",
+    inputSchema: {
+      type: "object",
+      properties: {
+        course_id: { type: "number", description: "ID of the course" },
+        announcement_id: { type: "number", description: "ID of the announcement to delete" }
+      },
+      required: ["course_id", "announcement_id"]
+    }
+  },
+  {
+    name: "canvas_delete_quiz",
+    description: "Delete a quiz",
+    inputSchema: {
+      type: "object",
+      properties: {
+        course_id: { type: "number", description: "ID of the course" },
+        quiz_id: { type: "number", description: "ID of the quiz to delete" }
+      },
+      required: ["course_id", "quiz_id"]
+    }
+  },
+  {
+    name: "canvas_delete_conversation",
+    description: "Delete a conversation",
+    inputSchema: {
+      type: "object",
+      properties: {
+        conversation_id: { type: "number", description: "ID of the conversation to delete" }
+      },
+      required: ["conversation_id"]
+    }
+  },
+  {
+    name: "canvas_unenroll_user",
+    description: "Unenroll a user from a course",
+    inputSchema: {
+      type: "object",
+      properties: {
+        course_id: { type: "number", description: "ID of the course" },
+        enrollment_id: { type: "number", description: "ID of the enrollment to remove" }
+      },
+      required: ["course_id", "enrollment_id"]
+    }
+  },
+
   // Account Management
   {
     name: "canvas_get_account",
@@ -1891,6 +1963,75 @@ class CanvasMCPServer {
             const syllabus = await this.client.getSyllabus(course_id);
             return {
               content: [{ type: "text", text: JSON.stringify(syllabus, null, 2) }]
+            };
+          }
+
+          // Delete Operations
+          case "canvas_delete_course": {
+            const { course_id } = args as { course_id: number };
+            if (!course_id) throw new Error("Missing required field: course_id");
+            
+            await this.client.deleteCourse(course_id);
+            return {
+              content: [{ type: "text", text: `Successfully deleted course ${course_id}` }]
+            };
+          }
+
+          case "canvas_delete_assignment": {
+            const { course_id, assignment_id } = args as { course_id: number; assignment_id: number };
+            if (!course_id || !assignment_id) {
+              throw new Error("Missing required fields: course_id and assignment_id");
+            }
+            
+            await this.client.deleteAssignment(course_id, assignment_id);
+            return {
+              content: [{ type: "text", text: `Successfully deleted assignment ${assignment_id} from course ${course_id}` }]
+            };
+          }
+
+          case "canvas_delete_announcement": {
+            const { course_id, announcement_id } = args as { course_id: number; announcement_id: number };
+            if (!course_id || !announcement_id) {
+              throw new Error("Missing required fields: course_id and announcement_id");
+            }
+            
+            await this.client.deleteAnnouncement(course_id, announcement_id);
+            return {
+              content: [{ type: "text", text: `Successfully deleted announcement ${announcement_id} from course ${course_id}` }]
+            };
+          }
+
+          case "canvas_delete_quiz": {
+            const { course_id, quiz_id } = args as { course_id: number; quiz_id: number };
+            if (!course_id || !quiz_id) {
+              throw new Error("Missing required fields: course_id and quiz_id");
+            }
+            
+            await this.client.deleteQuiz(course_id, quiz_id);
+            return {
+              content: [{ type: "text", text: `Successfully deleted quiz ${quiz_id} from course ${course_id}` }]
+            };
+          }
+
+          case "canvas_delete_conversation": {
+            const { conversation_id } = args as { conversation_id: number };
+            if (!conversation_id) throw new Error("Missing required field: conversation_id");
+            
+            await this.client.deleteConversation(conversation_id);
+            return {
+              content: [{ type: "text", text: `Successfully deleted conversation ${conversation_id}` }]
+            };
+          }
+
+          case "canvas_unenroll_user": {
+            const { course_id, enrollment_id } = args as { course_id: number; enrollment_id: number };
+            if (!course_id || !enrollment_id) {
+              throw new Error("Missing required fields: course_id and enrollment_id");
+            }
+            
+            await this.client.unenrollUser(course_id, enrollment_id);
+            return {
+              content: [{ type: "text", text: `Successfully unenrolled user (enrollment ${enrollment_id}) from course ${course_id}` }]
             };
           }
           

@@ -531,6 +531,10 @@ export class CanvasClient {
     return response.data;
   }
 
+  async deleteConversation(conversationId: number): Promise<void> {
+    await this.client.delete(`/conversations/${conversationId}`);
+  }
+
   // ---------------------
   // NOTIFICATIONS
   // ---------------------
@@ -724,6 +728,10 @@ export class CanvasClient {
     
     const response = await this.client.post(`/courses/${courseId}/discussion_topics`, postData);
     return response.data;
+  }
+
+  async deleteAnnouncement(courseId: number, announcementId: number): Promise<void> {
+    await this.client.delete(`/courses/${courseId}/discussion_topics/${announcementId}`);
   }
 
   // ---------------------
