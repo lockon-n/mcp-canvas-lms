@@ -910,10 +910,11 @@ const TOOLS: Tool[] = [
         page: { type: "number", description: "Page number (starts from 1, default: 1)", default: 1 },
         per_page: { type: "number", description: "Number of users per page (max: 20, default: 20)", default: 20 }
       },
-      anyOf: [
-        { required: ["session_id"] },
-        { required: ["account_id"] }
-      ]
+      // anyOf: [
+      //   { required: ["session_id"] },
+      //   { required: ["account_id"] }
+      // ]
+      required: []
     }
   },
   {
