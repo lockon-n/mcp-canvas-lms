@@ -169,7 +169,7 @@ const TOOLS: Tool[] = [
   },
   {
     name: "canvas_update_course",
-    description: "Update an existing course in Canvas",
+    description: "Update an existing course in Canvas. Use event='offer' to publish, event='claim' to unpublish.",
     inputSchema: {
       type: "object",
       properties: {
@@ -178,27 +178,19 @@ const TOOLS: Tool[] = [
         course_code: { type: "string", description: "New course code" },
         start_at: { type: "string", description: "New start date (ISO format)" },
         end_at: { type: "string", description: "New end date (ISO format)" },
-        license: { type: "string", description: "Course license" },
+        event: {
+          type: "string",
+          enum: ["offer", "claim", "conclude", "delete", "undelete"],
+          description: "Course event - 'offer' to publish, 'claim' to unpublish, 'conclude' to end, 'delete' to delete, 'undelete' to restore"
+        },
         is_public: { type: "boolean", description: "Whether the course is public" },
         is_public_to_auth_users: { type: "boolean", description: "Whether the course is public to authenticated users" },
         public_syllabus: { type: "boolean", description: "Whether the syllabus is public" },
         public_syllabus_to_auth: { type: "boolean", description: "Whether the syllabus is public to authenticated users" },
         public_description: { type: "string", description: "Public description of the course" },
-        allow_student_wiki_edits: { type: "boolean", description: "Whether students can edit the wiki" },
-        allow_wiki_comments: { type: "boolean", description: "Whether wiki comments are allowed" },
-        allow_student_forum_attachments: { type: "boolean", description: "Whether students can add forum attachments" },
-        open_enrollment: { type: "boolean", description: "Whether the course has open enrollment" },
-        self_enrollment: { type: "boolean", description: "Whether the course allows self enrollment" },
         restrict_enrollments_to_course_dates: { type: "boolean", description: "Whether to restrict enrollments to course start/end dates" },
-        hide_final_grades: { type: "boolean", description: "Whether to hide final grades" },
-        apply_assignment_group_weights: { type: "boolean", description: "Whether to apply assignment group weights" },
         time_zone: { type: "string", description: "Course time zone" },
-        syllabus_body: { type: "string", description: "Updated syllabus content" },
-        workflow_state: {
-          type: "string",
-          enum: ["unpublished", "available", "completed", "deleted"],
-          description: "Course workflow state - use 'available' to publish a course"
-        }
+        syllabus_body: { type: "string", description: "Updated syllabus content" }
       },
       required: ["course_id"]
     }

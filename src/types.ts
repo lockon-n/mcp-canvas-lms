@@ -577,23 +577,15 @@ export interface UpdateCourseArgs {
   course_code?: string;
   start_at?: string;
   end_at?: string;
-  license?: string;
+  event?: 'offer' | 'claim' | 'conclude' | 'delete' | 'undelete';  // offer=发布, claim=取消发布, conclude=结束, delete=删除
   is_public?: boolean;
   is_public_to_auth_users?: boolean;
   public_syllabus?: boolean;
   public_syllabus_to_auth?: boolean;
   public_description?: string;
-  allow_student_wiki_edits?: boolean;
-  allow_wiki_comments?: boolean;
-  allow_student_forum_attachments?: boolean;
-  open_enrollment?: boolean;
-  self_enrollment?: boolean;
   restrict_enrollments_to_course_dates?: boolean;
-  hide_final_grades?: boolean;
-  apply_assignment_group_weights?: boolean;
   time_zone?: string;
   syllabus_body?: string;
-  workflow_state?: 'unpublished' | 'available' | 'completed' | 'deleted';
 }
 
 export interface CreateAssignmentArgs {
