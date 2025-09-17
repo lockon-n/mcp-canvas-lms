@@ -593,6 +593,7 @@ export interface UpdateCourseArgs {
   apply_assignment_group_weights?: boolean;
   time_zone?: string;
   syllabus_body?: string;
+  workflow_state?: 'unpublished' | 'available' | 'completed' | 'deleted';
 }
 
 export interface CreateAssignmentArgs {

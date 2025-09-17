@@ -193,7 +193,12 @@ const TOOLS: Tool[] = [
         hide_final_grades: { type: "boolean", description: "Whether to hide final grades" },
         apply_assignment_group_weights: { type: "boolean", description: "Whether to apply assignment group weights" },
         time_zone: { type: "string", description: "Course time zone" },
-        syllabus_body: { type: "string", description: "Updated syllabus content" }
+        syllabus_body: { type: "string", description: "Updated syllabus content" },
+        workflow_state: {
+          type: "string",
+          enum: ["unpublished", "available", "completed", "deleted"],
+          description: "Course workflow state - use 'available' to publish a course"
+        }
       },
       required: ["course_id"]
     }
