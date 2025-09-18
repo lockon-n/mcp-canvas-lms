@@ -53,10 +53,7 @@ export class CanvasClient {
 
   constructor(token: string, domain: string, options?: { maxRetries?: number; retryDelay?: number }) {
     this.token = token;
-    // Support both HTTP and HTTPS based on domain format
-    this.baseURL = domain.startsWith('http') ? `${domain}/api/v1` :
-                   domain.includes('localhost') || domain.match(/^\d+\.\d+\.\d+\.\d+/) ?
-                   `http://${domain}/api/v1` : `https://${domain}/api/v1`;
+    this.baseURL = `https://${domain}/api/v1`;
     this.maxRetries = options?.maxRetries ?? 3;
     this.retryDelay = options?.retryDelay ?? 1000;
 
