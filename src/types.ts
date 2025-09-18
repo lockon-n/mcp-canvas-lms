@@ -317,6 +317,88 @@ export interface CanvasQuiz {
 
 export type CanvasQuizType = 'practice_quiz' | 'assignment' | 'graded_survey' | 'survey';
 
+export interface CanvasQuizQuestion {
+  id?: number;
+  quiz_id?: number;
+  position?: number;
+  question_name: string;
+  question_type: QuizQuestionType;
+  question_text: string;
+  points_possible: number;
+  correct_comments?: string;
+  incorrect_comments?: string;
+  neutral_comments?: string;
+  answers?: QuizAnswer[];
+  variables?: any;
+  formulas?: any;
+  answer_tolerance?: number;
+  formula_decimal_places?: number;
+  matches?: any[];
+  matching_answer_incorrect_matches?: string;
+}
+
+export type QuizQuestionType =
+  | 'multiple_choice_question'
+  | 'true_false_question'
+  | 'short_answer_question'
+  | 'fill_in_multiple_blanks_question'
+  | 'multiple_answers_question'
+  | 'multiple_dropdowns_question'
+  | 'matching_question'
+  | 'numerical_question'
+  | 'calculated_question'
+  | 'essay_question'
+  | 'file_upload_question'
+  | 'text_only_question';
+
+export interface QuizAnswer {
+  id?: number;
+  text?: string;
+  html?: string;
+  comments?: string;
+  weight?: number;
+  blank_id?: string;
+  answer_text?: string;
+  answer_match_left?: string;
+  answer_match_right?: string;
+  numerical_answer_type?: string;
+  exact?: number;
+  margin?: number;
+  approximate?: number;
+  precision?: number;
+  start?: number;
+  end?: number;
+}
+
+export interface QuizSubmissionAnswer {
+  question_id: number;
+  answer?: string | number | boolean | string[] | number[];
+  answer_id?: number;
+  match?: Array<{ answer_id: number; match_id: number }>;
+}
+
+export interface QuizSubmission {
+  id?: number;
+  quiz_id: number;
+  user_id?: number;
+  submission_id?: number;
+  started_at?: string;
+  finished_at?: string;
+  end_at?: string;
+  attempt: number;
+  extra_attempts?: number;
+  extra_time?: number;
+  manually_unlocked?: boolean;
+  time_spent?: number;
+  score?: number;
+  score_before_regrade?: number;
+  kept_score?: number;
+  fudge_points?: number;
+  has_seen_results?: boolean;
+  workflow_state?: 'untaken' | 'pending_review' | 'complete' | 'settings_only' | 'preview';
+  validation_token?: string;
+}
+
 export interface CanvasAnnouncement {
   id: number;
   title: string;

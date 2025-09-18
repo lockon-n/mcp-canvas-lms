@@ -697,6 +697,189 @@ const TOOLS: Tool[] = [
       required: ["course_id", "quiz_id"]
     }
   },
+  {
+    name: "canvas_submit_quiz_answers",
+    description: "Submit answers for a quiz attempt",
+    inputSchema: {
+      type: "object",
+      properties: {
+        course_id: { type: "number", description: "ID of the course" },
+        quiz_id: { type: "number", description: "ID of the quiz" },
+        submission_id: { type: "number", description: "ID of the quiz submission" },
+        answers: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              question_id: { type: "number", description: "ID of the question" },
+              answer: {
+                description: "Answer value - can be string, number, boolean, or array depending on question type"
+              },
+              answer_id: { type: "number", description: "ID of the answer choice (for multiple choice)" },
+              match: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    answer_id: { type: "number" },
+                    match_id: { type: "number" }
+                  }
+                },
+                description: "Matching pairs for matching questions"
+              }
+            },
+            required: ["question_id"]
+          },
+          description: "Array of answers to quiz questions"
+        }
+      },
+      required: ["course_id", "quiz_id", "submission_id", "answers"]
+    }
+  },
+  {
+    name: "canvas_list_quiz_questions",
+    description: "List all questions in a quiz",
+    inputSchema: {
+      type: "object",
+      properties: {
+        course_id: { type: "number", description: "ID of the course" },
+        quiz_id: { type: "number", description: "ID of the quiz" }
+      },
+      required: ["course_id", "quiz_id"]
+    }
+  },
+  {
+    name: "canvas_get_quiz_question",
+    description: "Get details of a specific quiz question",
+    inputSchema: {
+      type: "object",
+      properties: {
+        course_id: { type: "number", description: "ID of the course" },
+        quiz_id: { type: "number", description: "ID of the quiz" },
+        question_id: { type: "number", description: "ID of the question" }
+      },
+      required: ["course_id", "quiz_id", "question_id"]
+    }
+  },
+  {
+    name: "canvas_create_quiz_question",
+    description: "Add a new question to a quiz",
+    inputSchema: {
+      type: "object",
+      properties: {
+        course_id: { type: "number", description: "ID of the course" },
+        quiz_id: { type: "number", description: "ID of the quiz" },
+        question_name: { type: "string", description: "Name/title of the question" },
+        question_text: { type: "string", description: "The question text (HTML supported)" },
+        question_type: {
+          type: "string",
+          enum: [
+            "multiple_choice_question",
+            "true_false_question",
+            "short_answer_question",
+            "fill_in_multiple_blanks_question",
+            "multiple_answers_question",
+            "multiple_dropdowns_question",
+            "matching_question",
+            "numerical_question",
+            "calculated_question",
+            "essay_question",
+            "file_upload_question",
+            "text_only_question"
+          ],
+          description: "Type of question"
+        },
+        points_possible: { type: "number", description: "Points for this question" },
+        position: { type: "number", description: "Position in the quiz" },
+        correct_comments: { type: "string", description: "Comments shown for correct answers" },
+        incorrect_comments: { type: "string", description: "Comments shown for incorrect answers" },
+        neutral_comments: { type: "string", description: "General comments" },
+        answers: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              text: { type: "string", description: "Answer text" },
+              weight: { type: "number", description: "Weight (100 for correct, 0 for incorrect)" },
+              comments: { type: "string", description: "Comments for this answer" }
+            }
+          },
+          description: "Array of answer choices"
+        }
+      },
+      required: ["course_id", "quiz_id", "question_name", "question_text", "question_type", "points_possible"]
+    }
+  },
+  {
+    name: "canvas_update_quiz_question",
+    description: "Update an existing quiz question",
+    inputSchema: {
+      type: "object",
+      properties: {
+        course_id: { type: "number", description: "ID of the course" },
+        quiz_id: { type: "number", description: "ID of the quiz" },
+        question_id: { type: "number", description: "ID of the question to update" },
+        question_name: { type: "string", description: "New name/title of the question" },
+        question_text: { type: "string", description: "New question text" },
+        points_possible: { type: "number", description: "New points value" },
+        correct_comments: { type: "string", description: "New comments for correct answers" },
+        incorrect_comments: { type: "string", description: "New comments for incorrect answers" },
+        answers: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              text: { type: "string" },
+              weight: { type: "number" },
+              comments: { type: "string" }
+            }
+          },
+          description: "Updated answer choices"
+        }
+      },
+      required: ["course_id", "quiz_id", "question_id"]
+    }
+  },
+  {
+    name: "canvas_delete_quiz_question",
+    description: "Delete a question from a quiz",
+    inputSchema: {
+      type: "object",
+      properties: {
+        course_id: { type: "number", description: "ID of the course" },
+        quiz_id: { type: "number", description: "ID of the quiz" },
+        question_id: { type: "number", description: "ID of the question to delete" }
+      },
+      required: ["course_id", "quiz_id", "question_id"]
+    }
+  },
+  {
+    name: "canvas_upload_file_from_path",
+    description: "Upload a file from local filesystem to Canvas",
+    inputSchema: {
+      type: "object",
+      properties: {
+        file_path: { type: "string", description: "Absolute path to the local file" },
+        course_id: { type: "number", description: "ID of the course (optional)" },
+        folder_id: { type: "number", description: "ID of the folder to upload to (optional)" }
+      },
+      required: ["file_path"]
+    }
+  },
+  {
+    name: "canvas_submit_assignment_with_file",
+    description: "Submit an assignment with a local file upload",
+    inputSchema: {
+      type: "object",
+      properties: {
+        course_id: { type: "number", description: "ID of the course" },
+        assignment_id: { type: "number", description: "ID of the assignment" },
+        file_path: { type: "string", description: "Absolute path to the file to submit" },
+        comment: { type: "string", description: "Optional submission comment" }
+      },
+      required: ["course_id", "assignment_id", "file_path"]
+    }
+  },
 
   // Rubrics
   {
@@ -1887,10 +2070,143 @@ class CanvasMCPServer {
             if (!course_id || !quiz_id) {
               throw new Error("Missing required fields: course_id and quiz_id");
             }
-            
+
             const attempt = await this.client.startQuizAttempt(course_id, quiz_id);
             return {
               content: [{ type: "text", text: JSON.stringify(attempt, null, 2) }]
+            };
+          }
+
+          case "canvas_submit_quiz_answers": {
+            const { course_id, quiz_id, submission_id, answers } = args as {
+              course_id: number;
+              quiz_id: number;
+              submission_id: number;
+              answers: any[];
+            };
+            if (!course_id || !quiz_id || !submission_id || !answers) {
+              throw new Error("Missing required fields: course_id, quiz_id, submission_id, and answers");
+            }
+
+            const result = await this.client.submitQuizAttempt(course_id, quiz_id, submission_id, answers);
+            return {
+              content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
+            };
+          }
+
+          case "canvas_list_quiz_questions": {
+            const { course_id, quiz_id } = args as { course_id: number; quiz_id: number };
+            if (!course_id || !quiz_id) {
+              throw new Error("Missing required fields: course_id and quiz_id");
+            }
+
+            const questions = await this.client.listQuizQuestions(course_id, quiz_id);
+            return {
+              content: [{ type: "text", text: JSON.stringify(questions, null, 2) }]
+            };
+          }
+
+          case "canvas_get_quiz_question": {
+            const { course_id, quiz_id, question_id } = args as {
+              course_id: number;
+              quiz_id: number;
+              question_id: number;
+            };
+            if (!course_id || !quiz_id || !question_id) {
+              throw new Error("Missing required fields: course_id, quiz_id, and question_id");
+            }
+
+            const question = await this.client.getQuizQuestion(course_id, quiz_id, question_id);
+            return {
+              content: [{ type: "text", text: JSON.stringify(question, null, 2) }]
+            };
+          }
+
+          case "canvas_create_quiz_question": {
+            const { course_id, quiz_id, ...questionData } = args as any;
+            if (!course_id || !quiz_id || !questionData.question_name || !questionData.question_text || !questionData.question_type || questionData.points_possible === undefined) {
+              throw new Error("Missing required fields: course_id, quiz_id, question_name, question_text, question_type, and points_possible");
+            }
+
+            const question = await this.client.createQuizQuestion(course_id, quiz_id, questionData);
+            return {
+              content: [{ type: "text", text: JSON.stringify(question, null, 2) }]
+            };
+          }
+
+          case "canvas_update_quiz_question": {
+            const { course_id, quiz_id, question_id, ...updateData } = args as any;
+            if (!course_id || !quiz_id || !question_id) {
+              throw new Error("Missing required fields: course_id, quiz_id, and question_id");
+            }
+
+            const question = await this.client.updateQuizQuestion(course_id, quiz_id, question_id, updateData);
+            return {
+              content: [{ type: "text", text: JSON.stringify(question, null, 2) }]
+            };
+          }
+
+          case "canvas_delete_quiz_question": {
+            const { course_id, quiz_id, question_id } = args as {
+              course_id: number;
+              quiz_id: number;
+              question_id: number;
+            };
+            if (!course_id || !quiz_id || !question_id) {
+              throw new Error("Missing required fields: course_id, quiz_id, and question_id");
+            }
+
+            await this.client.deleteQuizQuestion(course_id, quiz_id, question_id);
+            return {
+              content: [{ type: "text", text: "Quiz question deleted successfully" }]
+            };
+          }
+
+          case "canvas_upload_file_from_path": {
+            const { file_path, course_id, folder_id } = args as {
+              file_path: string;
+              course_id?: number;
+              folder_id?: number;
+            };
+            if (!file_path) {
+              throw new Error("Missing required field: file_path");
+            }
+
+            const file = await this.client.uploadFileFromPath(file_path, course_id, folder_id);
+            return {
+              content: [{ type: "text", text: JSON.stringify(file, null, 2) }]
+            };
+          }
+
+          case "canvas_submit_assignment_with_file": {
+            const { course_id, assignment_id, file_path, comment } = args as {
+              course_id: number;
+              assignment_id: number;
+              file_path: string;
+              comment?: string;
+            };
+            if (!course_id || !assignment_id || !file_path) {
+              throw new Error("Missing required fields: course_id, assignment_id, and file_path");
+            }
+
+            // First upload the file
+            const file = await this.client.uploadFileFromPath(file_path, course_id);
+
+            // Then submit the assignment with the uploaded file
+            const submissionArgs: SubmitAssignmentArgs = {
+              course_id,
+              assignment_id,
+              submission_type: "online_upload",
+              file_ids: [file.id]
+            };
+
+            if (comment) {
+              (submissionArgs as any).comment = { text_comment: comment };
+            }
+
+            const submission = await this.client.submitAssignment(submissionArgs);
+            return {
+              content: [{ type: "text", text: JSON.stringify(submission, null, 2) }]
             };
           }
 

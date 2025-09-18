@@ -38,7 +38,10 @@ import {
   CanvasAccountReport,
   CreateReportArgs,
   ListAccountCoursesArgs,
-  ListAccountUsersArgs
+  ListAccountUsersArgs,
+  CanvasQuizQuestion,
+  QuizSubmission,
+  QuizSubmissionAnswer
 } from './types.js';
 
 export class CanvasClient {
@@ -50,7 +53,10 @@ export class CanvasClient {
 
   constructor(token: string, domain: string, options?: { maxRetries?: number; retryDelay?: number }) {
     this.token = token;
-    this.baseURL = `https://${domain}/api/v1`;
+    // Support both HTTP and HTTPS based on domain format
+    this.baseURL = domain.startsWith('http') ? `${domain}/api/v1` :
+                   domain.includes('localhost') || domain.match(/^\d+\.\d+\.\d+\.\d+/) ?
+                   `http://${domain}/api/v1` : `https://${domain}/api/v1`;
     this.maxRetries = options?.maxRetries ?? 3;
     this.retryDelay = options?.retryDelay ?? 1000;
 
@@ -769,17 +775,145 @@ export class CanvasClient {
     await this.client.delete(`/courses/${courseId}/quizzes/${quizId}`);
   }
 
-  async startQuizAttempt(courseId: number, quizId: number): Promise<any> {
+  async startQuizAttempt(courseId: number, quizId: number): Promise<QuizSubmission> {
     const response = await this.client.post(`/courses/${courseId}/quizzes/${quizId}/submissions`);
+    // Canvas returns the full response with quiz_submissions array
     return response.data;
   }
 
-  async submitQuizAttempt(courseId: number, quizId: number, submissionId: number, answers: any): Promise<any> {
-    const response = await this.client.post(
+  async submitQuizAttempt(courseId: number, quizId: number, submissionId: number, answers: QuizSubmissionAnswer[], validationToken?: string): Promise<QuizSubmission> {
+    // Submit answers via the Quiz Submission Questions API
+    // This is the standard method for submitting quiz answers
+    try {
+      const answersPayload = {
+        attempt: 1,
+        validation_token: validationToken || null,
+        quiz_questions: answers.map(answer => {
+          const questionAnswer: any = {
+            id: answer.question_id.toString()  // ID must be a string
+          };
+
+          // Set the answer based on the question type
+          if (answer.answer_id !== undefined) {
+            // For multiple choice and true/false questions, answer should be the integer answer_id
+            questionAnswer.answer = answer.answer_id;
+          } else if (answer.answer !== undefined) {
+            // For short answer, essay, numerical questions - use the actual answer value
+            questionAnswer.answer = answer.answer;
+          } else if (answer.match !== undefined) {
+            // For matching questions
+            questionAnswer.answer = answer.match;
+          }
+
+          return questionAnswer;
+        })
+      };
+
+      console.log('Submitting answers:', JSON.stringify(answersPayload, null, 2));
+
+      // Submit to the correct endpoint: /quiz_submissions/:id/questions
+      const response = await this.client.post(
+        `/quiz_submissions/${submissionId}/questions`,
+        answersPayload
+      );
+
+      console.log('Answers submitted successfully');
+    } catch (error) {
+      console.error('Error submitting answers:', (error as any).message);
+      if ((error as any).response?.data) {
+        console.error('Error details:', (error as any).response.data);
+      }
+    }
+
+    // Then complete the quiz submission
+    const completeResponse = await this.client.post(
       `/courses/${courseId}/quizzes/${quizId}/submissions/${submissionId}/complete`,
-      { quiz_submissions: [{ attempt: 1, questions: answers }] }
+      {
+        attempt: 1,
+        validation_token: validationToken || null
+      }
     );
+
+    return completeResponse.data;
+  }
+
+  // Quiz Questions
+  async listQuizQuestions(courseId: number, quizId: number): Promise<CanvasQuizQuestion[]> {
+    const response = await this.client.get(`/courses/${courseId}/quizzes/${quizId}/questions`);
     return response.data;
+  }
+
+  async getQuizQuestion(courseId: number, quizId: number, questionId: number): Promise<CanvasQuizQuestion> {
+    const response = await this.client.get(`/courses/${courseId}/quizzes/${quizId}/questions/${questionId}`);
+    return response.data;
+  }
+
+  async createQuizQuestion(courseId: number, quizId: number, questionData: Partial<CanvasQuizQuestion>): Promise<CanvasQuizQuestion> {
+    const response = await this.client.post(`/courses/${courseId}/quizzes/${quizId}/questions`, {
+      question: questionData
+    });
+    return response.data;
+  }
+
+  async updateQuizQuestion(courseId: number, quizId: number, questionId: number, questionData: Partial<CanvasQuizQuestion>): Promise<CanvasQuizQuestion> {
+    const response = await this.client.put(`/courses/${courseId}/quizzes/${quizId}/questions/${questionId}`, {
+      question: questionData
+    });
+    return response.data;
+  }
+
+  async deleteQuizQuestion(courseId: number, quizId: number, questionId: number): Promise<void> {
+    await this.client.delete(`/courses/${courseId}/quizzes/${quizId}/questions/${questionId}`);
+  }
+
+  // Enhanced file upload with local file support
+  async uploadFileFromPath(filePath: string, courseId?: number, folderId?: number): Promise<CanvasFile> {
+    const fs = await import('fs');
+    const path = await import('path');
+    const FormData = (await import('form-data')).default;
+
+    const stats = await fs.promises.stat(filePath);
+    const fileName = path.default.basename(filePath);
+
+    // Step 1: Get upload URL
+    // For students, use user files endpoint instead of course files
+    const uploadEndpoint = folderId
+      ? `/folders/${folderId}/files`
+      : courseId
+      ? `/users/self/files`  // Changed to user's own files space
+      : '/users/self/files';
+
+    const uploadParams = {
+      name: fileName,
+      size: stats.size,
+      on_duplicate: 'rename'
+    };
+
+    const uploadUrlResponse = await this.client.post(uploadEndpoint, uploadParams);
+    const { upload_url, upload_params } = uploadUrlResponse.data;
+
+    // Step 2: Upload the file
+    const formData = new FormData();
+    Object.entries(upload_params).forEach(([key, value]) => {
+      formData.append(key, value as string);
+    });
+
+    const fileStream = fs.default.createReadStream(filePath);
+    formData.append('file', fileStream, fileName);
+
+    const uploadResponse = await axios.post(upload_url, formData, {
+      headers: formData.getHeaders(),
+      maxContentLength: Infinity,
+      maxBodyLength: Infinity
+    });
+
+    // Step 3: Confirm upload
+    if (uploadResponse.data.location) {
+      const confirmResponse = await this.client.get(uploadResponse.data.location);
+      return confirmResponse.data;
+    }
+
+    return uploadResponse.data;
   }
 
   // ---------------------
