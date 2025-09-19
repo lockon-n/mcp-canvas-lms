@@ -835,13 +835,43 @@ export class CanvasClient {
   }
 
   // Quiz Questions
-  async listQuizQuestions(courseId: number, quizId: number): Promise<CanvasQuizQuestion[]> {
-    const response = await this.client.get(`/courses/${courseId}/quizzes/${quizId}/questions`);
+  async listQuizQuestions(
+    courseId: number,
+    quizId: number,
+    options?: {
+      quiz_submission_id?: number;
+      quiz_submission_attempt?: number;
+      use_submission_endpoint?: boolean; // 新选项：直接使用submission端点
+    }
+  ): Promise<CanvasQuizQuestion[]> {
+    // 如果指定使用submission端点，直接调用quiz_submissions API
+    if (options?.use_submission_endpoint && options?.quiz_submission_id) {
+      const response = await this.client.get(`/quiz_submissions/${options.quiz_submission_id}/questions`);
+      return response.data.quiz_submission_questions || [];
+    }
+
+    // 否则使用原有的courses API（支持submission参数）
+    const params: any = {};
+    if (options?.quiz_submission_id) {
+      params.quiz_submission_id = options.quiz_submission_id;
+    }
+    if (options?.quiz_submission_attempt) {
+      params.quiz_submission_attempt = options.quiz_submission_attempt;
+    }
+
+    const response = await this.client.get(`/courses/${courseId}/quizzes/${quizId}/questions`, {
+      params
+    });
     return response.data;
   }
 
   async getQuizQuestion(courseId: number, quizId: number, questionId: number): Promise<CanvasQuizQuestion> {
     const response = await this.client.get(`/courses/${courseId}/quizzes/${quizId}/questions/${questionId}`);
+    return response.data;
+  }
+
+  async getQuizSubmissionQuestions(submissionId: number): Promise<any> {
+    const response = await this.client.get(`/quiz_submissions/${submissionId}/questions`);
     return response.data;
   }
 

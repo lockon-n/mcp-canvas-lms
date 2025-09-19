@@ -739,12 +739,15 @@ const TOOLS: Tool[] = [
   },
   {
     name: "canvas_list_quiz_questions",
-    description: "List all questions in a quiz",
+    description: "List all questions in a quiz. For students: use quiz_submission_id + use_submission_endpoint=true for best results after starting a quiz attempt.",
     inputSchema: {
       type: "object",
       properties: {
         course_id: { type: "number", description: "ID of the course" },
-        quiz_id: { type: "number", description: "ID of the quiz" }
+        quiz_id: { type: "number", description: "ID of the quiz" },
+        quiz_submission_id: { type: "number", description: "Optional: Quiz submission ID (use the 'id' field, not 'submission_id')" },
+        quiz_submission_attempt: { type: "number", description: "Optional: The attempt number (required if quiz_submission_id is specified for courses API)" },
+        use_submission_endpoint: { type: "boolean", description: "Optional: Use /quiz_submissions/:id/questions endpoint instead of courses API (recommended for students)" }
       },
       required: ["course_id", "quiz_id"]
     }
@@ -2097,12 +2100,29 @@ class CanvasMCPServer {
           }
 
           case "canvas_list_quiz_questions": {
-            const { course_id, quiz_id } = args as { course_id: number; quiz_id: number };
+            const { course_id, quiz_id, quiz_submission_id, quiz_submission_attempt, use_submission_endpoint } = args as {
+              course_id: number;
+              quiz_id: number;
+              quiz_submission_id?: number;
+              quiz_submission_attempt?: number;
+              use_submission_endpoint?: boolean;
+            };
             if (!course_id || !quiz_id) {
               throw new Error("Missing required fields: course_id and quiz_id");
             }
 
-            const questions = await this.client.listQuizQuestions(course_id, quiz_id);
+            const options: any = {};
+            if (quiz_submission_id) {
+              options.quiz_submission_id = quiz_submission_id;
+            }
+            if (quiz_submission_attempt) {
+              options.quiz_submission_attempt = quiz_submission_attempt;
+            }
+            if (use_submission_endpoint) {
+              options.use_submission_endpoint = use_submission_endpoint;
+            }
+
+            const questions = await this.client.listQuizQuestions(course_id, quiz_id, Object.keys(options).length > 0 ? options : undefined);
             return {
               content: [{ type: "text", text: JSON.stringify(questions, null, 2) }]
             };
