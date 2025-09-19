@@ -706,6 +706,7 @@ const TOOLS: Tool[] = [
         course_id: { type: "number", description: "ID of the course" },
         quiz_id: { type: "number", description: "ID of the quiz" },
         submission_id: { type: "number", description: "ID of the quiz submission" },
+        validation_token: { type: "string", description: "Validation token from the quiz attempt (optional but recommended)" },
         answers: {
           type: "array",
           items: {
@@ -2078,17 +2079,18 @@ class CanvasMCPServer {
           }
 
           case "canvas_submit_quiz_answers": {
-            const { course_id, quiz_id, submission_id, answers } = args as {
+            const { course_id, quiz_id, submission_id, answers, validation_token } = args as {
               course_id: number;
               quiz_id: number;
               submission_id: number;
               answers: any[];
+              validation_token?: string;
             };
             if (!course_id || !quiz_id || !submission_id || !answers) {
               throw new Error("Missing required fields: course_id, quiz_id, submission_id, and answers");
             }
 
-            const result = await this.client.submitQuizAttempt(course_id, quiz_id, submission_id, answers);
+            const result = await this.client.submitQuizAttempt(course_id, quiz_id, submission_id, answers, validation_token);
             return {
               content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
             };
