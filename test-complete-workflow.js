@@ -9,7 +9,7 @@ import path from 'path';
 
 const STUDENT_TOKEN = 'canvas_token_brian1990$p1';
 const ADMIN_TOKEN = 'mcpcanvasadmintoken1';
-const DOMAIN = 'https://localhost:20001';
+const DOMAIN = 'localhost:20001';
 
 console.log('='.repeat(60));
 console.log(' 完整的Canvas工作流测试');

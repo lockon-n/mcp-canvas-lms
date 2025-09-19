@@ -7,7 +7,7 @@ import { CanvasClient } from './build/client.js';
 
 const STUDENT_TOKEN = 'canvas_token_brian1990$p1';
 const ADMIN_TOKEN = 'mcpcanvasadmintoken1';
-const DOMAIN = 'https://localhost:20001';
+const DOMAIN = 'localhost:20001';
 
 console.log('='.repeat(60));
 console.log(' 🔍 验证答案是否真正提交');
