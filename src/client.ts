@@ -780,8 +780,9 @@ export class CanvasClient {
     } catch (error: any) {
       // Canvas sometimes returns 500 but actually creates the submission
       // Also handle 409 (conflict) when attempt already exists
-      if (error.response?.status === 500 || error.response?.status === 409) {
-        if (error.response?.status === 500) {
+      const statusCode = error.statusCode || error.response?.status;
+      if (statusCode === 500 || statusCode === 409) {
+        if (statusCode === 500) {
           console.log('[Canvas API] Received 500 error, checking if submission was created anyway...');
         } else {
           console.log('[Canvas API] Quiz attempt already exists (409), fetching existing submission...');
@@ -789,7 +790,7 @@ export class CanvasClient {
 
         try {
           // Wait a bit for Canvas to stabilize after 500 error
-          if (error.response?.status === 500) {
+          if (statusCode === 500) {
             await new Promise(resolve => setTimeout(resolve, 500));
           }
 
