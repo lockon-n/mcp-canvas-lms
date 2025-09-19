@@ -687,7 +687,7 @@ const TOOLS: Tool[] = [
   },
   {
     name: "canvas_start_quiz_attempt",
-    description: "Start a new quiz attempt",
+    description: "Start a new quiz attempt. Returns a quiz_submission object with 'id' field (the quiz_submission_id) and 'validation_token' needed for submitting answers. May return 500 error but still create submission (will auto-retry). Returns 409 if attempt already exists (will return existing).",
     inputSchema: {
       type: "object",
       properties: {
@@ -699,14 +699,14 @@ const TOOLS: Tool[] = [
   },
   {
     name: "canvas_submit_quiz_answers",
-    description: "Submit answers for a quiz attempt",
+    description: "Submit answers for a quiz attempt. Use the 'id' from canvas_start_quiz_attempt as submission_id, NOT the quiz_id or any other ID.",
     inputSchema: {
       type: "object",
       properties: {
         course_id: { type: "number", description: "ID of the course" },
         quiz_id: { type: "number", description: "ID of the quiz" },
-        submission_id: { type: "number", description: "ID of the quiz submission" },
-        validation_token: { type: "string", description: "Validation token from the quiz attempt (optional but recommended)" },
+        submission_id: { type: "number", description: "The quiz_submission ID from canvas_start_quiz_attempt response (the 'id' field, NOT 'submission_id' field)" },
+        validation_token: { type: "string", description: "REQUIRED: Validation token from canvas_start_quiz_attempt response. Without this, you'll get 403 'invalid token' error" },
         answers: {
           type: "array",
           items: {
@@ -739,13 +739,13 @@ const TOOLS: Tool[] = [
   },
   {
     name: "canvas_list_quiz_questions",
-    description: "List all questions in a quiz. For students: use quiz_submission_id + use_submission_endpoint=true for best results after starting a quiz attempt.",
+    description: "List all questions in a quiz. Students: First call canvas_start_quiz_attempt to get quiz_submission_id, then use that ID (NOT quiz_id) with use_submission_endpoint=true.",
     inputSchema: {
       type: "object",
       properties: {
         course_id: { type: "number", description: "ID of the course" },
         quiz_id: { type: "number", description: "ID of the quiz" },
-        quiz_submission_id: { type: "number", description: "Optional: Quiz submission ID (use the 'id' field, not 'submission_id')" },
+        quiz_submission_id: { type: "number", description: "For students: The 'id' field from canvas_start_quiz_attempt response (NOT the quiz_id or submission_id field)" },
         quiz_submission_attempt: { type: "number", description: "Optional: The attempt number (required if quiz_submission_id is specified for courses API)" },
         use_submission_endpoint: { type: "boolean", description: "Optional: Use /quiz_submissions/:id/questions endpoint instead of courses API (recommended for students)" }
       },

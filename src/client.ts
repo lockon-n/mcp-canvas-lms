@@ -773,9 +773,45 @@ export class CanvasClient {
   }
 
   async startQuizAttempt(courseId: number, quizId: number): Promise<QuizSubmission> {
-    const response = await this.client.post(`/courses/${courseId}/quizzes/${quizId}/submissions`);
-    // Canvas returns the full response with quiz_submissions array
-    return response.data;
+    try {
+      const response = await this.client.post(`/courses/${courseId}/quizzes/${quizId}/submissions`);
+      // Canvas returns the full response with quiz_submissions array
+      return response.data;
+    } catch (error: any) {
+      // Canvas sometimes returns 500 but actually creates the submission
+      // Also handle 409 (conflict) when attempt already exists
+      if (error.response?.status === 500 || error.response?.status === 409) {
+        if (error.response?.status === 500) {
+          console.log('[Canvas API] Received 500 error, checking if submission was created anyway...');
+        } else {
+          console.log('[Canvas API] Quiz attempt already exists (409), fetching existing submission...');
+        }
+
+        try {
+          // Wait a bit for Canvas to stabilize after 500 error
+          if (error.response?.status === 500) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+
+          const getResponse = await this.client.get(`/courses/${courseId}/quizzes/${quizId}/submissions`);
+
+          // Return the first (current) submission
+          if (getResponse.data?.quiz_submissions?.length > 0) {
+            console.log('[Canvas API] Successfully retrieved submission');
+            return getResponse.data.quiz_submissions[0];
+          } else if (getResponse.data) {
+            console.log('[Canvas API] Successfully retrieved submission data');
+            return getResponse.data;
+          }
+        } catch (getError) {
+          // If 500 and we can't get submission, the operation really failed
+          console.log('[Canvas API] Could not retrieve submission after error');
+          throw error;
+        }
+      }
+      // Re-throw other errors
+      throw error;
+    }
   }
 
   async submitQuizAttempt(courseId: number, quizId: number, submissionId: number, answers: QuizSubmissionAnswer[], validationToken?: string): Promise<QuizSubmission> {
